@@ -28,10 +28,15 @@ async def check_leak(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool
                 await update.message.delete()
             except Exception as e:
                 logger.warning(f"Could not delete leak message: {e}")
-            await update.message.chat.send_message(
-                "⚠️ *Security Warning*\n\nSensitive information detected and deleted.",
-                parse_mode="Markdown"
-            )
+            try:
+                await update.message.chat.send_message(
+                    "⚠️ *Security Warning*\n\n"
+                    "Sensitive information detected and deleted.\n\n"
+                    "Never send API keys, passwords, or seed phrases via Telegram.",
+                    parse_mode="Markdown"
+                )
+            except Exception as e:
+                logger.error(f"Could not warn user of leak: {e}")
             await audit.log(
                 actor_telegram_id=update.effective_user.id,
                 action=AuditAction.LEAK_DETECTED.value,
@@ -47,7 +52,8 @@ async def check_leak(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool
                         f"🚨 *Leak Detection Alert*\n"
                         f"User: @{update.effective_user.username}\n"
                         f"ID: `{update.effective_user.id}`\n"
-                        f"Term matched: `{term}`"
+                        f"Term matched: `{term}`\n"
+                        f"Message was deleted."
                     ),
                     parse_mode="Markdown"
                 )
