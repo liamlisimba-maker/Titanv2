@@ -1,9 +1,7 @@
 """
-health.py — TITAN Wave 1
-System health monitoring. Returns structured health data.
-Does NOT communicate via Telegram — that belongs in bot/handlers/admin.py.
+health.py - TITAN Wave 1
+System health monitoring. Never raises - always returns a dict.
 """
-
 import psutil
 import logging
 import time
@@ -14,11 +12,6 @@ logger = logging.getLogger(__name__)
 _start_time = time.time()
 
 async def get_health() -> dict:
-    """
-    Return full system health snapshot.
-    Always returns a dict — never raises.
-    On component failure, marks that component as degraded.
-    """
     health = {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
@@ -26,19 +19,29 @@ async def get_health() -> dict:
         "wave": 1,
         "components": {}
     }
-    
-    # Database check
+
     try:
-        row = await execute_read_one("SELECT COUNT(*) as count FROM users")
+        row = await execute_read_one(
+            "SELECT COUNT(*) as count FROM users"
+        )
+        active_row = await execute_read_one(
+            "SELECT COUNT(*) as count FROM users WHERE state='ACTIVE'"
+        )
+        pending_row = await execute_read_one(
+            "SELECT COUNT(*) as count FROM users WHERE state='PENDING_APPROVAL'"
+        )
         health["components"]["database"] = {
             "status": "ok",
-            "user_count": row["count"] if row else 0
+            "total_users": row["count"] if row else 0,
+            "active_users": active_row["count"] if active_row else 0,
+            "pending_users": pending_row["count"] if pending_row else 0
         }
     except Exception as e:
-        health["components"]["database"] = {"status": "error", "detail": str(e)}
+        health["components"]["database"] = {
+            "status": "error", "detail": str(e)
+        }
         health["status"] = "degraded"
-    
-    # System resources
+
     try:
         mem = psutil.virtual_memory()
         health["components"]["system"] = {
@@ -48,12 +51,13 @@ async def get_health() -> dict:
             "cpu_percent": psutil.cpu_percent(interval=0.1)
         }
     except Exception as e:
-        health["components"]["system"] = {"status": "error", "detail": str(e)}
-    
+        health["components"]["system"] = {
+            "status": "error", "detail": str(e)
+        }
+
     return health
 
 def format_uptime(seconds: int) -> str:
-    """Convert seconds to human-readable uptime string."""
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
     if hours > 0:
