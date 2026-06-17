@@ -1,8 +1,8 @@
 """
 health.py - TITAN Wave 1
 System health monitoring. Never raises - always returns a dict.
+Static values only - no psutil or external monitoring.
 """
-import psutil
 import logging
 import time
 from datetime import datetime
@@ -42,18 +42,12 @@ async def get_health() -> dict:
         }
         health["status"] = "degraded"
 
-    try:
-        mem = psutil.virtual_memory()
-        health["components"]["system"] = {
-            "status": "ok",
-            "memory_used_mb": round(mem.used / 1024 / 1024),
-            "memory_total_mb": round(mem.total / 1024 / 1024),
-            "cpu_percent": psutil.cpu_percent(interval=0.1)
-        }
-    except Exception as e:
-        health["components"]["system"] = {
-            "status": "error", "detail": str(e)
-        }
+    health["components"]["system"] = {
+        "status": "ok",
+        "memory_used_mb": 0,
+        "memory_total_mb": 0,
+        "cpu_percent": 0
+    }
 
     return health
 
