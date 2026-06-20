@@ -5,7 +5,7 @@ admin session except /authorize.
 """
 import logging
 import uuid
-import bcrypt
+import hashlib, hmac
 from datetime import datetime, timedelta
 from telegram import Update
 from telegram.ext import (
@@ -98,9 +98,9 @@ async def authorize(
         )
         return
     pin = context.args[0]
-    pin_hash = ADMIN_PIN_HASH.encode() if ADMIN_PIN_HASH else b""
+    pin_hash = ADMIN_PIN_HASH if ADMIN_PIN_HASH else ""
     try:
-        valid = bcrypt.checkpw(pin.encode(), pin_hash)
+        valid = (hashlib.sha256(pin.encode()).hexdigest() == pin_hash)
     except Exception:
         valid = False
     await execute_write(
